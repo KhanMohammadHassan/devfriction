@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+usage() {
+    echo "Usage: devfriction port <port>"
+    echo
+    echo "Inspect the process using a network port."
+}
+
+if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
+    usage
+    exit 0
+fi
+
+if [[ $# -ne 1 ]]; then
+    echo "Error: a port number is required." >&2
+    echo
+    usage >&2
+    exit 2
+fi
+
+PORT="$1"
+
+if [[ ! "$PORT" =~ ^[0-9]+$ ]]; then
+    echo "Error: port must be a number." >&2
+    exit 2
+fi
+
+if (( PORT < 1 || PORT > 65535 )); then
+    echo "Error: port must be between 1 and 65535." >&2
+    exit 2
+fi
+
+if ! command -v lsof >/dev/null 2>&1; then
+    echo "Error: 'lsof' is required but was not found." >&2
+    exit 1
+fi
+
+PID="$(lsof -t -i :"$PORT" 2>/dev/null || true)"
+
+if [[ -z "$PID" ]]; then
+    echo "Port $PORT is not in use."
+    exit 0
+fi
+
+PROCESS="$(ps -p "$PID" -o comm= 2>/dev/null || true)"
+
+echo "Port:    $PORT"
+echo "Status:  IN USE"
+echo "Process: ${PROCESS:-unknown}"
+echo "PID:     $PID"
