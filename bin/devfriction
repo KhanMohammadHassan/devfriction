@@ -8,11 +8,16 @@ case "$COMMAND" in
     hello)
         exec "$(dirname "$0")/../libexec/devfriction-hello"
         ;;
+    port)
+        shift
+        exec "$(dirname "$0")/../libexec/devfriction-port" "$@"
+        ;;
     "")
         echo "Usage: devfriction <command>"
         echo
         echo "Commands:"
         echo "  hello    Test that devfriction is working"
+        echo "  port     Inspect a process using a network port"
         ;;
     *)
         echo "devfriction: unknown command: $COMMAND" >&2
