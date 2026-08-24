@@ -37,7 +37,9 @@ if ! command -v lsof >/dev/null 2>&1; then
     exit 1
 fi
 
-PID="$(lsof -t -i :"$PORT" 2>/dev/null || true)"
+#PID="$(lsof -t -i :"$PORT" 2>/dev/null || true)"
+
+PID="$(lsof -nP -iTCP:"$PORT" -sTCP:LISTEN -t 2>/dev/null || true)" #Now we're specifically asking lsof for a TCP listener.
 
 if [[ -z "$PID" ]]; then
     echo "Port $PORT is not in use."
