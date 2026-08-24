@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+COMMAND="${1:-}"
+
+case "$COMMAND" in
+    hello)
+        exec "$(dirname "$0")/../libexec/devfriction-hello"
+        ;;
+    "")
+        echo "Usage: devfriction <command>"
+        echo
+        echo "Commands:"
+        echo "  hello    Test that devfriction is working"
+        ;;
+    *)
+        echo "devfriction: unknown command: $COMMAND" >&2
+        echo "Run 'devfriction' to see available commands." >&2
+        exit 2
+        ;;
+esac
