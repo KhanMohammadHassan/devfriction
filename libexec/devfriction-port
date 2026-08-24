@@ -5,7 +5,7 @@ set -euo pipefail
 usage() {
     echo "Usage: devfriction port <port>"
     echo
-    echo "Inspect the process using a network port."
+    echo "Inspect and safely terminate a process using a network port."
 }
 
 if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
@@ -27,19 +27,19 @@ if [[ ! "$PORT" =~ ^[0-9]+$ ]]; then
     exit 2
 fi
 
-if (( PORT < 1 || PORT > 65535 )); then
+if (( 10#$PORT < 1 || 10#$PORT > 65535 )); then
     echo "Error: port must be between 1 and 65535." >&2
     exit 2
 fi
+
+PORT=$((10#$PORT))
 
 if ! command -v lsof >/dev/null 2>&1; then
     echo "Error: 'lsof' is required but was not found." >&2
     exit 1
 fi
 
-#PID="$(lsof -t -i :"$PORT" 2>/dev/null || true)"
-
-PID="$(lsof -nP -iTCP:"$PORT" -sTCP:LISTEN -t 2>/dev/null || true)" #Now we're specifically asking lsof for a TCP listener.
+PID="$(lsof -nP -iTCP:"$PORT" -sTCP:LISTEN -t 2>/dev/null || true)"
 
 if [[ -z "$PID" ]]; then
     echo "Port $PORT is not in use."
@@ -48,7 +48,45 @@ fi
 
 PROCESS="$(ps -p "$PID" -o comm= 2>/dev/null || true)"
 
+echo "Checking port $PORT..."
+echo
 echo "Port:    $PORT"
 echo "Status:  IN USE"
 echo "Process: ${PROCESS:-unknown}"
 echo "PID:     $PID"
+echo
+
+read -r -p "Terminate this process? [y/N]: " CONFIRM
+
+case "$CONFIRM" in
+    y|Y|yes|YES)
+        ;;
+    *)
+        echo "No action taken."
+        exit 0
+        ;;
+esac
+
+echo
+echo "Sending SIGTERM..."
+
+if ! kill -TERM "$PID" 2>/dev/null; then
+    echo "Error: failed to send SIGTERM to PID $PID." >&2
+    exit 1
+fi
+
+echo "Waiting for process to exit..."
+
+for _ in {1..20}; do
+    if ! kill -0 "$PID" 2>/dev/null; then
+        echo "Port $PORT is now available."
+        exit 0
+    fi
+
+    sleep 0.25
+done
+
+echo "Process is still running after SIGTERM."
+echo "No forceful termination was attempted."
+
+exit 1
