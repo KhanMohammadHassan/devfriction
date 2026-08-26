@@ -86,7 +86,39 @@ for _ in {1..20}; do
     sleep 0.25
 done
 
+echo
 echo "Process is still running after SIGTERM."
-echo "No forceful termination was attempted."
+echo
 
+read -r -p "Force termination with SIGKILL? [y/N]: " FORCE_CONFIRM
+
+case "$FORCE_CONFIRM" in
+    y|Y|yes|YES)
+        ;;
+    *)
+        echo "No forceful termination."
+        exit 1
+        ;;
+esac
+
+echo
+echo "Sending SIGKILL..."
+
+if ! kill -KILL "$PID" 2>/dev/null; then
+    echo "Error: failed to send SIGKILL to PID $PID." >&2
+    exit 1
+fi
+
+echo "Waiting for process to exit..."
+
+for _ in {1..20}; do
+    if ! kill -0 "$PID" 2>/dev/null; then
+        echo "Port $PORT is now available."
+        exit 0
+    fi
+
+    sleep 0.25
+done
+
+echo "Error: process PID $PID is still running after SIGKILL." >&2
 exit 1
