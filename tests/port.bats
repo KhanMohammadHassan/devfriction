@@ -157,3 +157,14 @@ start_server() {
 
     ! kill -0 "$SERVER_PID" 2>/dev/null
 }
+#Add invalid SIGKILL confirmation
+@test "port does not SIGKILL stubborn process on invalid confirmation" {
+    start_stubborn_server
+
+    run bash -c "printf 'y\nabc\n' | '$DEVFRICTION' port '$TEST_PORT'"
+
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"No forceful termination."* ]]
+
+    kill -0 "$SERVER_PID"
+}
