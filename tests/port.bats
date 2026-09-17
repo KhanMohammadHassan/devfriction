@@ -118,6 +118,7 @@ start_server() {
     [[ "$output" == *"No action taken."* ]]
 
     kill -0 "$SERVER_PID"
+    sleep 0.25
 }
 @test "port terminates a normal process with SIGTERM" {
     start_server
@@ -129,6 +130,7 @@ start_server() {
     [[ "$output" == *"Port $TEST_PORT is now available."* ]]
 
     ! kill -0 "$SERVER_PID" 2>/dev/null
+    sleep 0.25
 }
 
 @test "port keeps stubborn process alive when SIGKILL is declined" {
@@ -142,6 +144,7 @@ start_server() {
     [[ "$output" == *"No forceful termination."* ]]
 
     kill -0 "$SERVER_PID"
+    sleep 0.25
 }
 #SIGKILL confirmation test
 
@@ -156,6 +159,7 @@ start_server() {
     [[ "$output" == *"Port $TEST_PORT is now available."* ]]
 
     ! kill -0 "$SERVER_PID" 2>/dev/null
+    sleep 0.25
 }
 #Add invalid SIGKILL confirmation
 @test "port does not SIGKILL stubborn process on invalid confirmation" {
@@ -167,4 +171,5 @@ start_server() {
     [[ "$output" == *"No forceful termination."* ]]
 
     kill -0 "$SERVER_PID"
+    sleep 0.25
 }
