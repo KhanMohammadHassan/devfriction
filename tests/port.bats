@@ -143,3 +143,17 @@ start_server() {
 
     kill -0 "$SERVER_PID"
 }
+#SIGKILL confirmation test
+
+@test "port forcefully terminates stubborn process when SIGKILL is confirmed" {
+    start_stubborn_server
+
+    run bash -c "printf 'y\ny\n' | '$DEVFRICTION' port '$TEST_PORT'"
+
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Process is still running after SIGTERM."* ]]
+    [[ "$output" == *"Sending SIGKILL..."* ]]
+    [[ "$output" == *"Port $TEST_PORT is now available."* ]]
+
+    ! kill -0 "$SERVER_PID" 2>/dev/null
+}
