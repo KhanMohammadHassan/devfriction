@@ -2,6 +2,12 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+# shellcheck source=../lib/listeners.sh
+source "$PROJECT_ROOT/lib/listeners.sh"
+
 usage() {
     echo "Usage: devfriction port <port>"
     echo
@@ -39,7 +45,7 @@ if ! command -v lsof >/dev/null 2>&1; then
     exit 1
 fi
 
-PID="$(lsof -nP -iTCP:"$PORT" -sTCP:LISTEN -t 2>/dev/null || true)"
+PID="$(get_listener_pids "$PORT" || true)"
 
 if [[ -z "$PID" ]]; then
     echo "Port $PORT is not in use."
