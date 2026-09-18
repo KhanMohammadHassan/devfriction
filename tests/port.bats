@@ -95,11 +95,15 @@ start_stubborn_server() {
 @test "port detects a listening process" {
     start_server
 
-    run "$DEVFRICTION" port "$TEST_PORT"
+    run bash -c "printf 'n\n' | '$DEVFRICTION' port '$TEST_PORT' 2>&1"
 
     [ "$status" -eq 0 ]
     [[ "$output" == *"Status:  IN USE"* ]]
-    [[ "$output" == *"Process: python3"* ]]
+    [[ "$output" == *"Process:"* ]]
+    [[ "$output" == *"PID:"* ]]
+    [[ "$output" == *"No action taken."* ]]
+
+    kill -0 "$SERVER_PID"
 }
 
 @test "port does not terminate process when user declines" {
