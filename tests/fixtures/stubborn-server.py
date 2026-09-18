@@ -23,7 +23,8 @@ def main():
         http.server.SimpleHTTPRequestHandler,
     )
 
-    print(f"Stubborn server listening on port {port}", flush=True)
+    actual_port = server.server_address[1]
+    print(f"STUBBORN_SERVER_PORT={actual_port}", flush=True)
 
     try:
         server.serve_forever()
