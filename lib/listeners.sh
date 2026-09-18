@@ -251,7 +251,7 @@ _list_tcp_listeners_lsof() {
         }'
 }
 
-
+bash 
 list_normalized_tcp_listeners() {
     # Linux / WSL:
     # prefer ss because it is the native socket inventory.
