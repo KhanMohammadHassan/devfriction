@@ -2,15 +2,42 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
 COMMAND="${1:-}"
 
 case "$COMMAND" in
     hello)
-        exec "$(dirname "$0")/../libexec/devfriction-hello"
+        exec "$PROJECT_ROOT/libexec/devfriction-hello"
         ;;
     port)
         shift
-        exec "$(dirname "$0")/../libexec/devfriction-port" "$@"
+        exec "$PROJECT_ROOT/libexec/devfriction-port" "$@"
+        ;;
+    security)
+        shift
+
+        case "${1:-}" in
+            exposure)
+                shift
+
+                case "${1:-}" in
+                    list)
+                        shift
+                        exec "$PROJECT_ROOT/libexec/devfriction-security-exposure-list" "$@"
+                        ;;
+                    *)
+                        echo "Usage: devfriction security exposure list"
+                        exit 2
+                        ;;
+                esac
+                ;;
+            *)
+                echo "Usage: devfriction security exposure <command>"
+                exit 2
+                ;;
+        esac
         ;;
     "")
         echo "Usage: devfriction <command>"
