@@ -1,0 +1,127 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+source "$PROJECT_ROOT/lib/classify.sh"
+source "$PROJECT_ROOT/lib/listeners.sh"
+
+usage() {
+    cat <<'EOF'
+Usage: devfriction security exposure list
+
+List local TCP listeners and classify their network binding.
+
+This command is read-only. It does not terminate processes,
+change firewall rules, or modify network configuration.
+EOF
+}
+
+risk_context() {
+    local port="$1"
+
+    case "$port" in
+        2375)
+            printf '%s\n' "CRITICAL: Docker daemon"
+            ;;
+        5432|3306|6379|27017|9200|11211)
+            printf '%s\n' "HIGH: database service"
+            ;;
+        8888|8889)
+            printf '%s\n' "REVIEW: Jupyter"
+            ;;
+        3000|4040|5000|8080|9090)
+            printf '%s\n' "REVIEW: dev/admin service"
+            ;;
+        22|139|445|3389|5900)
+            printf '%s\n' "CONTEXT: remote/admin service"
+            ;;
+        *)
+            printf '%s\n' "INFO"
+            ;;
+    esac
+}
+
+exposure_state() {
+    local scope="$1"
+
+    case "$scope" in
+        loopback)
+            printf '%s\n' "LOCAL-ONLY"
+            ;;
+        all-interfaces)
+            printf '%s\n' "POTENTIAL-NETWORK-EXPOSURE"
+            ;;
+        interface-bound)
+            printf '%s\n' "INTERFACE-BOUND"
+            ;;
+        link-local)
+            printf '%s\n' "LINK-LOCAL"
+            ;;
+        *)
+            printf '%s\n' "UNKNOWN"
+            ;;
+    esac
+}
+
+main() {
+    if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
+        usage
+        exit 0
+    fi
+
+    if [[ "$#" -ne 0 ]]; then
+        printf 'Error: unexpected argument: %s\n\n' "$1" >&2
+        usage >&2
+        exit 2
+    fi
+
+    local inventory
+    local status
+
+    set +e
+    inventory="$(list_normalized_tcp_listeners)"
+    status=$?
+    set -e
+
+    if [[ "$status" -eq 127 ]]; then
+        printf 'Error: no supported TCP listener tool was found.\n' >&2
+        printf 'Install or use ss or lsof.\n' >&2
+        exit 127
+    fi
+
+    if [[ "$status" -ne 0 ]]; then
+        printf 'Error: failed to inventory TCP listeners.\n' >&2
+        exit "$status"
+    fi
+
+    if [[ -z "$inventory" ]]; then
+        printf 'No TCP listeners found.\n'
+        exit 0
+    fi
+
+    printf '%-5s %-18s %-6s %-17s %-8s %-18s %-14s %-24s\n' \
+        "PROTO" "ADDRESS" "PORT" "SCOPE" "PID" "PROCESS" "USER" "ASSESSMENT"
+    printf '%s\n' "---------------------------------------------------------------------------------------------------------------"
+
+    while IFS=$'\t' read -r proto addr port scope pid process user source; do
+        [[ -n "$proto" ]] || continue
+
+        local assessment
+        local context
+
+        context="$(risk_context "$port")"
+        assessment="$(exposure_state "$scope")"
+
+        if [[ "$context" != "INFO" ]]; then
+            assessment="$assessment | $context"
+        fi
+
+        printf '%-5s %-18s %-6s %-17s %-8s %-18s %-14s %-24s\n' \
+            "$proto" "$addr" "$port" "$scope" "$pid" "$process" "$user" "$assessment"
+    done <<< "$inventory"
+}
+
+main "$@"
